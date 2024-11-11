@@ -13,6 +13,7 @@ export const SocketManager = () => {
     left: false,
     right: false,
     jump: false,
+    angleRad: 0,
   });
 
   useEffect(() => {

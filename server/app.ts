@@ -11,6 +11,7 @@ type Directions = {
   left?: boolean;
   right?: boolean;
   jump?: boolean;
+  angleRad?: number;
 };
 type Character = {
   id: string;
@@ -22,6 +23,8 @@ type Character = {
   acceleration: Position;
   isOnGround: boolean;
   directions: Directions; // 추가
+  jump?: boolean;
+  angleRad?: number; // 라디안 값의 각도 저장
 };
 
 function quantize(value: number, unit: number = 0.01): number {
@@ -111,6 +114,7 @@ io.on("connection", (socket: Socket) => {
       left: false,
       right: false,
       jump: false,
+      angleRad: 0,
     },
   };
   characters.push(newCharacter);
@@ -127,6 +131,10 @@ io.on("connection", (socket: Socket) => {
       }
 
       character.directions = directions;
+
+      if (directions.angleRad !== undefined) {
+        character.angleRad = directions.angleRad;
+      }
     }
   });
 
@@ -150,50 +158,60 @@ setInterval(() => {
     character.acceleration = [0, 0, 0];
     // Update velocity based on acceleration
     const directions = character.directions || {};
+    // 라디안 값의 각도를 사용
+    const angleRad = character.angleRad || 0;
+
+    // 전진 및 우측 벡터 계산 (Y축 회전 기준)
+    const forwardX = Math.sin(angleRad);
+    const forwardZ = Math.cos(angleRad);
+    const rightX = Math.cos(angleRad);
+    const rightZ = -Math.sin(angleRad);
     if (directions.up) {
-      character.acceleration[2] -= ACCELERATION_AMOUNT;
+      character.acceleration[0] += forwardX * ACCELERATION_AMOUNT;
+      character.acceleration[2] += forwardZ * ACCELERATION_AMOUNT;
     }
     if (directions.down) {
-      character.acceleration[2] += ACCELERATION_AMOUNT;
+      character.acceleration[0] -= forwardX * ACCELERATION_AMOUNT;
+      character.acceleration[2] -= forwardZ * ACCELERATION_AMOUNT;
     }
     if (directions.left) {
-      character.acceleration[0] -= ACCELERATION_AMOUNT;
+      character.acceleration[0] -= rightX * ACCELERATION_AMOUNT;
+      character.acceleration[2] -= rightZ * ACCELERATION_AMOUNT;
     }
     if (directions.right) {
-      character.acceleration[0] += ACCELERATION_AMOUNT;
+      character.acceleration[0] += rightX * ACCELERATION_AMOUNT;
+      character.acceleration[2] += rightZ * ACCELERATION_AMOUNT;
     }
     // 속도 업데이트
     character.velocity[0] += character.acceleration[0];
-    character.velocity[1] += character.acceleration[1];
     character.velocity[2] += character.acceleration[2];
 
-    // Apply friction to simulate gradual slowing down
+    // 마찰 적용
     character.velocity[0] *= FRICTION;
     character.velocity[2] *= FRICTION;
 
-    // 수평 속도 제한
-    const horizontalSpeed = Math.sqrt(
+    // 속도 제한
+    const speed = Math.sqrt(
       character.velocity[0] ** 2 + character.velocity[2] ** 2
     );
-    if (horizontalSpeed > MAX_SPEED) {
-      const scale = MAX_SPEED / horizontalSpeed;
+    if (speed > MAX_SPEED) {
+      const scale = MAX_SPEED / speed;
       character.velocity[0] *= scale;
       character.velocity[2] *= scale;
     }
 
     // 위치 업데이트
     character.position[0] += character.velocity[0];
-    character.position[1] += character.velocity[1];
     character.position[2] += character.velocity[2];
 
-    // 위치 양자화 (필요한 경우)
+    // 위치 양자화
     character.position[0] = quantize(character.position[0]);
-    character.position[1] = quantize(character.position[1]);
     character.position[2] = quantize(character.position[2]);
 
     // 충돌 처리
     handleCollision(character);
   });
-  // Emit updated character positions to all clients
+
+  // 클라이언트로 캐릭터 상태 전송
   io.emit("characters", characters);
 }, UPDATE_INTERVAL);
