@@ -10,8 +10,6 @@ type Directions = {
   down?: boolean;
   left?: boolean;
   right?: boolean;
-  jump?: boolean;
-  angleRad?: number;
 };
 type Character = {
   id: string;
@@ -23,8 +21,10 @@ type Character = {
   acceleration: Position;
   isOnGround: boolean;
   directions: Directions; // 추가
+  hasTail: boolean;
   jump?: boolean;
   angleRad?: number; // 라디안 값의 각도 저장
+  shift?: boolean;
 };
 
 function quantize(value: number, unit: number = 0.01): number {
@@ -83,10 +83,29 @@ const handleCollision = (character: Character) => {
   });
 };
 
+const handleCatch = (character: Character) => {
+  characters.forEach((otherCharacter) => {
+    if (character.id !== otherCharacter.id && otherCharacter.hasTail) {
+      const dx = character.position[0] - otherCharacter.position[0];
+      const dz = character.position[2] - otherCharacter.position[2];
+      const distance = Math.sqrt(dx * dx + dz * dz);
+
+      if (distance <= TAIL_STEAL_DISTANCE) {
+        character.hasTail = true;
+        otherCharacter.hasTail = false;
+        console.log(
+          `${character.id} has stolen the tail from ${otherCharacter.id}`
+        );
+      }
+    }
+  });
+};
+
 io.listen(3001);
 const characters: Character[] = [];
 const existingPositions: Position[] = [];
 const CHARACTER_SIZE = 2;
+const TAIL_STEAL_DISTANCE = 5;
 
 // Define constants for acceleration, friction, and maximum speed
 const FRICTION = 0.7; // Friction coefficient
@@ -102,9 +121,12 @@ io.on("connection", (socket: Socket) => {
   const newCharacter: Character = {
     id: socket.id,
     position: newPosition,
-    bodyColor: generateRandomHexColor(),
-    hairColor: generateRandomHexColor(),
-    bellyColor: generateRandomHexColor(),
+    // bodyColor: generateRandomHexColor(),
+    // hairColor: generateRandomHexColor(),
+    // bellyColor: generateRandomHexColor(),
+    bodyColor: "#FFFFFF",
+    hairColor: "#FFFFFF",
+    bellyColor: "#FFFFFF",
     velocity: [0, 0, 0], // [x, y, z]
     acceleration: [0, 0, 0],
     isOnGround: true,
@@ -113,9 +135,9 @@ io.on("connection", (socket: Socket) => {
       down: false,
       left: false,
       right: false,
-      jump: false,
-      angleRad: 0,
     },
+    hasTail: characters.length % 2 === 0,
+    shift: false,
   };
   characters.push(newCharacter);
 
@@ -129,12 +151,27 @@ io.on("connection", (socket: Socket) => {
         console.warn("Invalid directions received:", directions);
         return;
       }
-
       character.directions = directions;
+    }
+  });
+  socket.on("jump", (jump: boolean) => {
+    const character = characters.find((char) => char.id === socket.id);
+    if (character) {
+      character.jump = jump;
+    }
+  });
 
-      if (directions.angleRad !== undefined) {
-        character.angleRad = directions.angleRad;
-      }
+  socket.on("angle", (angleRad: number) => {
+    const character = characters.find((char) => char.id === socket.id);
+    if (character) {
+      character.angleRad = angleRad;
+    }
+  });
+
+  socket.on("shift", (shift: boolean) => {
+    const character = characters.find((char) => char.id === socket.id);
+    if (character) {
+      character.shift = shift;
     }
   });
 
@@ -162,8 +199,8 @@ setInterval(() => {
     const angleRad = character.angleRad || 0;
 
     // 전진 및 우측 벡터 계산 (Y축 회전 기준)
-    const forwardX = Math.sin(angleRad);
-    const forwardZ = Math.cos(angleRad);
+    const forwardX = -Math.sin(angleRad);
+    const forwardZ = -Math.cos(angleRad);
     const rightX = Math.cos(angleRad);
     const rightZ = -Math.sin(angleRad);
     if (directions.up) {
@@ -208,8 +245,24 @@ setInterval(() => {
     character.position[0] = quantize(character.position[0]);
     character.position[2] = quantize(character.position[2]);
 
+    // 꼬리 잡기 로직
+    if (character.shift) {
+      handleCatch(character);
+    }
+
     // 충돌 처리
     handleCollision(character);
+
+    if (character.hasTail) {
+      character.bodyColor = "#888888";
+      character.hairColor = "#888888";
+      character.bellyColor = "#888888";
+    }
+    if (!character.hasTail) {
+      character.bodyColor = "#FFFFFF";
+      character.hairColor = "#FFFFFF";
+      character.bellyColor = "#FFFFFF";
+    }
   });
 
   // 클라이언트로 캐릭터 상태 전송

@@ -13,7 +13,6 @@ export const SocketManager = () => {
     left: false,
     right: false,
     jump: false,
-    angleRad: 0,
   });
 
   useEffect(() => {
@@ -36,6 +35,13 @@ export const SocketManager = () => {
     socket.on("characters", onCharacters);
 
     const handleKeyDown = (event) => {
+      if (event.code === "ShiftLeft" || event.code === "ShiftRight") {
+        if (!keysPressed.current.shift) {
+          keysPressed.current.shift = true;
+          socket.emit("shift", true);
+          console.log("shift: true");
+        }
+      }
       if (
         [
           "ArrowUp",
@@ -90,6 +96,13 @@ export const SocketManager = () => {
     };
 
     const handleKeyUp = (event) => {
+      if (event.code === "ShiftLeft" || event.code === "ShiftRight") {
+        if (keysPressed.current.shift) {
+          keysPressed.current.shift = false;
+          socket.emit("shift", false);
+          console.log("shift: false");
+        }
+      }
       if (
         [
           "ArrowUp",
