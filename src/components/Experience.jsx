@@ -3,14 +3,14 @@ import {
   Environment,
   OrbitControls,
   useCursor,
-} from '@react-three/drei';
-import { useEffect, useState } from 'react';
-import AnimatedRobot from './AnimatedRobot';
-import { useAtom } from 'jotai';
-import { charactersAtom } from './SocketManager';
-import * as THREE from 'three';
+} from "@react-three/drei";
+import React, { useEffect, useState } from "react";
+import AnimatedRobot from "./AnimatedRobot";
+import { useAtom } from "jotai";
+import { charactersAtom } from "./SocketManager";
+import * as THREE from "three";
 
-export const Experience = () => {
+export const Experience = React.memo(() => {
   const [onFloor, setOnFloor] = useState(false);
   useCursor(onFloor);
   const [characters] = useAtom(charactersAtom);
@@ -36,9 +36,12 @@ export const Experience = () => {
           hairColor={c.hairColor}
           bodyColor={c.bodyColor}
           bellyColor={c.bellyColor}
-          position={new THREE.Vector3(c.position[0], 0, c.position[2])}
+          posX={c.position[0]}
+          posY={c.position[1]}
+          posZ={c.position[2]}
+          // position={new THREE.Vector3(c.position[0], 0, c.position[2])}
         />
       ))}
     </>
   );
-};
+});

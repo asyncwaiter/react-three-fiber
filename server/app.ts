@@ -162,8 +162,8 @@ setInterval(() => {
     const angleRad = character.angleRad || 0;
 
     // 전진 및 우측 벡터 계산 (Y축 회전 기준)
-    const forwardX = Math.sin(angleRad);
-    const forwardZ = Math.cos(angleRad);
+    const forwardX = -Math.sin(angleRad);
+    const forwardZ = -Math.cos(angleRad);
     const rightX = Math.cos(angleRad);
     const rightZ = -Math.sin(angleRad);
     if (directions.up) {
