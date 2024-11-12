@@ -12,7 +12,6 @@ export const SocketManager = () => {
     down: false,
     left: false,
     right: false,
-    jump: false,
   });
 
   useEffect(() => {
@@ -43,14 +42,7 @@ export const SocketManager = () => {
         }
       }
       if (
-        [
-          "ArrowUp",
-          "ArrowDown",
-          "ArrowLeft",
-          "ArrowRight",
-          " ",
-          "Space",
-        ].includes(event.code)
+        ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(event.code)
       ) {
         event.preventDefault();
         let keyChanged = false;
@@ -79,12 +71,6 @@ export const SocketManager = () => {
               keyChanged = true;
             }
             break;
-          case " ":
-          case "Space":
-            if (!keysPressed.current.jump) {
-              keysPressed.current.jump = true;
-              keyChanged = true;
-            }
           default:
             break;
         }
@@ -92,6 +78,11 @@ export const SocketManager = () => {
           socket.emit("move", keysPressed.current);
           console.log("Emitted move:", keysPressed.current);
         }
+      }
+      if (event.code === "Space" || event.code === " ") {
+        event.preventDefault();
+        socket.emit("jump", true);
+        console.log("Emitted jump: true");
       }
     };
 
@@ -104,14 +95,7 @@ export const SocketManager = () => {
         }
       }
       if (
-        [
-          "ArrowUp",
-          "ArrowDown",
-          "ArrowLeft",
-          "ArrowRight",
-          " ",
-          "Space",
-        ].includes(event.code)
+        ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(event.code)
       ) {
         event.preventDefault();
         let keyChanged = false;
@@ -140,13 +124,6 @@ export const SocketManager = () => {
               keyChanged = true;
             }
             break;
-          case " ":
-          case "Space":
-            if (keysPressed.current.jump) {
-              keysPressed.current.jump = false;
-              keyChanged = true;
-            }
-            break;
           default:
             break;
         }
@@ -154,6 +131,11 @@ export const SocketManager = () => {
           socket.emit("move", keysPressed.current);
           console.log("Emitted move:", keysPressed.current);
         }
+      }
+      if (event.code === "Space" || event.code === " ") {
+        event.preventDefault();
+        socket.emit("jump", false);
+        console.log("Emitted jump: false");
       }
     };
 
